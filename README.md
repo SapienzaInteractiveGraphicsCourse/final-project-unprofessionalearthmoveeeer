@@ -1,4 +1,4 @@
-# Kazakhstan Driving Exam Simulator — B Category (Astana)
+# Kazakhstan Driving Exam Simulator - B Category (Astana)
 
 Interactive Graphics course project. An in-browser
 training site and simulation of the **practical driving test of Kazakhstan**,
