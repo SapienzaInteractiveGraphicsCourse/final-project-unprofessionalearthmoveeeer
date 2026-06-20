@@ -1,7 +1,7 @@
 // The overpass / hill-start element ("estakada"). Placed from image pixels:
 // it spans image x = 550 (east, where the west-bound car arrives) to x = 210
-// (west). The car rides up a ramp, over a flat crest (STOP line + STOP sign),
-// and down the far side. Road row is image y = 35.
+// (west), and image y = 30 .. 95 across the road. The car rides up a ramp, over
+// a flat crest (STOP line + STOP sign), and down the far side.
 
 import * as THREE from 'three';
 import { pxX, pxZ } from './mapCoords.js';
@@ -9,13 +9,13 @@ import { pxX, pxZ } from './mapCoords.js';
 const EAST = pxX(550);   // up-ramp bottom (car arrives here first, driving −X)
 const WEST = pxX(210);   // down-ramp bottom
 const RAMP = 11;         // ramp run (m)
-const ZC = pxZ(35);      // road centre row (10 px above the start row)
-const HALFW = 3.5;       // road half-width
+const Z0 = pxZ(30);      // north edge of the deck (image y = 30)
+const Z1 = pxZ(95);      // south edge of the deck (image y = 95)
 
 export const OVERPASS = {
   xA: EAST, xB: EAST - RAMP, xC: WEST + RAMP, xD: WEST,
   H: 2.0,                       // crest height
-  z0: ZC - HALFW, z1: ZC + HALFW,
+  z0: Z0, z1: Z1,
   stopX: EAST - RAMP,           // crest entry — where the west-bound car stops
 };
 

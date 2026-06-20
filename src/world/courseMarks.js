@@ -1,21 +1,30 @@
-// Renders the course markings on the ground and builds the traffic lights for
-// the light-lines. Returns the traffic-signal controllers (read by the exam) and
-// an update() to cycle them.
+// Renders the course markings on the ground and the intersection traffic lights.
+// Returns the traffic-signal source (read by the exam) and an update() to cycle it.
 //
-// By default only the required black penalty lines and the traffic lights are
-// shown (the map PNG already has its own paint). Pass { debug: true } to also
-// draw the invisible rule lines (signal/stop/light/parking/finish) for checking.
+// There are exactly four traffic lights, placed by image pixel and aimed at a
+// cardinal direction, and they are all driven by ONE shared signal so they stay
+// synchronised. By default only the required black penalty lines and the red
+// stop-lines are drawn; { debug: true } also draws the invisible rule lines.
 
 import * as THREE from 'three';
 import { px2world } from './mapCoords.js';
-import { buildTrafficLight } from './trafficLight.js';
+import { buildTrafficLight, makeSignal } from './trafficLight.js';
 import { COURSE } from '../exam/course.js';
+
+// Lamps face local +Z; rotate the group to aim the light at a cardinal direction.
+const FACE = { north: Math.PI, south: 0, east: Math.PI / 2, west: -Math.PI / 2 };
+
+// The four intersection lights (image pixels + facing).
+const TRAFFIC_LIGHTS = [
+  { px: 563, py: 380, face: 'north' },
+  { px: 559, py: 487, face: 'west' },
+  { px: 679, py: 497, face: 'south' },
+  { px: 689, py: 375, face: 'east' },
+];
 
 export function buildCourseMarks(scene, { debug = false } = {}) {
   const group = new THREE.Group();
   scene.add(group);
-  const lights = [];
-  const signals = {};
 
   const line = (s, color, width = 0.25, y = 0.05) => {
     const A = px2world(s.a[0], s.a[1]), B = px2world(s.b[0], s.b[1]);
@@ -27,27 +36,30 @@ export function buildCourseMarks(scene, { debug = false } = {}) {
     m.position.set((A.x + B.x) / 2, y, (A.z + B.z) / 2);
     m.rotation.y = -Math.atan2(dz, dx);
     group.add(m);
-    return { A, B };
   };
 
   // Required: penalty "buttons" as thin black lines.
   for (const s of COURSE.penaltyLines) line(s, 0x0e0e10, 0.16);
 
-  // Traffic lights at each light-line (+ a red stop line so it's visible).
-  for (const e of COURSE.lightLines) {
-    const { A, B } = line(e, 0xd83030, 0.5);
-    const dx = B.x - A.x, dz = B.z - A.z, len = Math.hypot(dx, dz) || 1;
-    const nx = -dz / len, nz = dx / len; // perpendicular
+  // Red stop-line strips at the traffic-light fail lines.
+  for (const e of COURSE.lightLines) line(e, 0xd83030, 0.5);
+
+  // One shared signal drives all four lights (kept in sync).
+  const signal = makeSignal();
+  const lights = [];
+  for (const def of TRAFFIC_LIGHTS) {
     const tl = buildTrafficLight();
-    tl.group.position.set((A.x + B.x) / 2 + nx * 2.5, 0, (A.z + B.z) / 2 + nz * 2.5);
-    tl.group.rotation.y = Math.atan2(-(nz), nx); // face back toward the line
-    for (let i = 0, n = (Math.random() * 160) | 0; i < n; i++) tl.update(0.1); // desync
-    scene.add(tl.group);
+    const w = px2world(def.px, def.py);
+    tl.group.position.set(w.x, 0, w.z);
+    tl.group.rotation.y = FACE[def.face];
+    group.add(tl.group);
     lights.push(tl);
-    signals[e.id] = tl;
   }
 
-  // Debug guide lines (off by default).
+  // Every light-line reads the same synced signal.
+  const signals = {};
+  for (const e of COURSE.lightLines) signals[e.id] = signal;
+
   if (debug) {
     for (const s of COURSE.signalLines) line(s, s.dir === 'left' ? 0x2f7fd0 : 0xffa53b, 0.4);
     for (const s of COURSE.stopLines) line(s, 0xf0f0f2, 0.5);
@@ -55,6 +67,11 @@ export function buildCourseMarks(scene, { debug = false } = {}) {
     line(COURSE.finishLine, 0x3cd070, 0.6);
   }
 
-  function update(dt) { for (const tl of lights) tl.update(dt); }
+  function update(dt) {
+    // Advance the shared signal and mirror it onto every light.
+    signal.update(dt);
+    for (const l of lights) l.setState(signal.signal);
+  }
+
   return { group, signals, update };
 }
