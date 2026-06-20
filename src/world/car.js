@@ -35,6 +35,7 @@ const _qp = new THREE.Quaternion();
 export function buildCar({ color = 0xc62828, tweens } = {}) {
   const root = new THREE.Group();
   root.name = 'car';
+  root.scale.setScalar(0.85); // a little smaller relative to the autodrome
 
   // --- Materials ---------------------------------------------------------
   const paint = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.35 });
