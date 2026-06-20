@@ -19,8 +19,8 @@ export function buildEnvironment(scene) {
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 180;
-  const s = 40;
+  sun.shadow.camera.far = 220;
+  const s = 72;
   Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s });
   sun.shadow.bias = -0.0004;
   scene.add(sun);

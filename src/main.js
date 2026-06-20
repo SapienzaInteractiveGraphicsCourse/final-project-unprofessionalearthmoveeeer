@@ -43,7 +43,7 @@ const examGround = buildExamGround(scene);
 const car = buildCar({ color: 0xc62828, tweens });
 scene.add(car.group);
 
-const vehicle = new Vehicle(car);
+const vehicle = new Vehicle(car, examGround.start);
 const cameras = new CameraManager(camera, controls, car.group);
 
 // --- Input ----------------------------------------------------------------

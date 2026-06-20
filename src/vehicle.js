@@ -13,14 +13,13 @@ const BRAKE_DECEL = 20;      // m/s²
 const ROLL_FRICTION = 3.2;   // m/s² coasting deceleration
 const STEER_SPEED = 3.0;     // how fast the steering angle eases to target
 
-const START = { x: -15, z: 0, heading: 0 };
-
 export class Vehicle {
-  constructor(car) {
+  constructor(car, start = { x: 0, z: 0, heading: 0 }) {
     this.car = car;
-    this.x = START.x;
-    this.z = START.z;
-    this.heading = START.heading; // yaw, radians
+    this.start = start;
+    this.x = start.x;
+    this.z = start.z;
+    this.heading = start.heading; // yaw, radians
     this.speed = 0;               // signed m/s
     this.steer = 0;               // current steering angle (radians)
     this.braking = false;
@@ -28,7 +27,7 @@ export class Vehicle {
   }
 
   reset() {
-    this.x = START.x; this.z = START.z; this.heading = START.heading;
+    this.x = this.start.x; this.z = this.start.z; this.heading = this.start.heading;
     this.speed = 0; this.steer = 0;
     this.car.reset();
   }

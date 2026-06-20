@@ -14,9 +14,13 @@ the user.
 ## 1. Overview
 
 The application is a real-time 3D scene rendered in the browser with **WebGL via
-Three.js**. The user drives a category-B car around the Astana practical-exam
-pad and performs a slalom ("snake") maneuver between traffic cones. The scene
-demonstrates the four mandatory pillars of the course project:
+Three.js**. The user drives a category-B car around a recreation of an Astana
+practical-exam **autodrome**: a perimeter loop road around grass infields, a
+central four-way **intersection** with zebra crosswalks and turn arrows, two
+**parking zones** (a parallel-parking box and rows of perpendicular bays with
+static parked cars) and two **maneuver lines** (slalom and serpentine) of
+traffic cones the driver weaves through. The scene demonstrates the four
+mandatory pillars of the course project:
 
 | Requirement | Where it is satisfied |
 | --- | --- |
@@ -148,9 +152,10 @@ src/
   cameras.js            CameraManager: chase / cockpit / top / orbit
   world/
     environment.js      sky, fog, sun + hemisphere lights, surrounding ground
-    examGround.js       marked exam pad, curbs, slalom cones, collision + scoring
+    autodromeMap.js     top-down autodrome texture + shared layout (roads, zones, cones)
+    examGround.js       autodrome plane, curbs, cones, parked cars, collision + scoring
     car.js              hierarchical car model + its animations
-    textures.js         procedural asphalt (colour/normal/roughness) + markings
+    textures.js         procedural asphalt (colour/normal/roughness) maps
 lib/                    vendored Three.js (+ addons) and tween.js
 assets/                 reserved for optional future models/textures
 docs/                   this document
@@ -162,10 +167,10 @@ camera → update HUD → render.
 
 ---
 
-## 7. Exam ground, textures and markings
+## 7. The autodrome, textures and markings
 
-`src/world/environment.js` builds a large tiling asphalt ground using three
-procedural textures generated on a canvas (`textures.js`):
+`src/world/environment.js` builds a large tiling asphalt ground under everything
+using three procedural textures generated on a canvas (`textures.js`):
 
 - **colour map** — dark grey with per-pixel noise and occasional light speckles;
 - **normal map** — per-pixel perturbation of the X/Y normal channels for a rough
@@ -174,15 +179,26 @@ procedural textures generated on a canvas (`textures.js`):
 
 All three tile 30×30 across the ground and use anisotropic filtering.
 
-`src/world/examGround.js` adds the **marked exam pad** on top: a single
-high-resolution canvas texture drawn in world-proportional coordinates with a
-**parallel-parking box**, a **start/finish line**, a dashed **centre lane**, a
-**direction arrow** and the **"ASTANA — PRACTICAL EXAM (B)"** label. A light curb
-borders the pad.
+On top, `src/world/autodromeMap.js` paints the **whole autodrome** (130 × 90 m)
+into a single high-resolution canvas texture, drawn in world-proportional
+coordinates so the 3D props line up with the paint. It contains:
 
-This satisfies the "textures of different kinds (colour, normal, specular/…)"
-requirement: a colour map, a normal map, a roughness (specular-equivalent for
-the metalness/roughness workflow) map, and a separate painted decal texture.
+- a **perimeter loop road** (grass infield carved out of an asphalt ring) with a
+  dashed centre line and clockwise **direction arrows**;
+- a central **four-way intersection** with **zebra crosswalks**, stop areas and
+  **turn arrows** on each approach;
+- a **parallel-parking box** plus rows of **perpendicular parking bays**;
+- two **maneuver lines** (slalom and serpentine) marked on asphalt patches;
+- numbered **blue exam markers** at the zone entries and a title banner.
+
+A `LAYOUT` object is exported from the same module so `examGround.js` places the
+cones, parked cars and the car's start pose at exactly the painted positions.
+`examGround.js` then adds the 3D props: the autodrome plane, a white **perimeter
+curb**, the **traffic cones**, and two **static parked cars**.
+
+This satisfies the "textures of different kinds" requirement: a colour map, a
+normal map and a roughness (specular-equivalent in the metalness/roughness
+workflow) map for the ground, plus the separate painted autodrome decal texture.
 
 ---
 
