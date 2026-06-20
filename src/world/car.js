@@ -26,6 +26,12 @@ const HALF_WHEELBASE = 1.45; // front axle x = +, rear axle x = -
 const HALF_TRACK = 0.82;     // wheel z offset
 export const MAX_STEER = 0.52; // radians (~30°)
 
+// Reusable temporaries for setPose (yaw + pitch).
+const _Y = new THREE.Vector3(0, 1, 0);
+const _Z = new THREE.Vector3(0, 0, 1);
+const _qy = new THREE.Quaternion();
+const _qp = new THREE.Quaternion();
+
 export function buildCar({ color = 0xc62828, tweens } = {}) {
   const root = new THREE.Group();
   root.name = 'car';
@@ -101,12 +107,13 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
   // Amber turn indicators (front + rear, both sides). Materials are per-side so
   // we can blink left/right/hazard independently.
   const amberMat = () => new THREE.MeshStandardMaterial({ color: 0x7a4a00, emissive: 0xff9500, emissiveIntensity: 0.0, roughness: 0.4 });
+  // Car-local LEFT is the −Z side (forward is +X), RIGHT is +Z.
   const indLeftMat = amberMat();
   const indRightMat = amberMat();
-  const indFL = box(0.1, 0.16, 0.22, indLeftMat);  indFL.position.set(2.16, 0.7, 0.82);
-  const indRL = box(0.12, 0.16, 0.22, indLeftMat); indRL.position.set(-2.16, 0.78, 0.82);
-  const indFR = box(0.1, 0.16, 0.22, indRightMat); indFR.position.set(2.16, 0.7, -0.82);
-  const indRR = box(0.12, 0.16, 0.22, indRightMat); indRR.position.set(-2.16, 0.78, -0.82);
+  const indFL = box(0.1, 0.16, 0.22, indLeftMat);  indFL.position.set(2.16, 0.7, -0.82);
+  const indRL = box(0.12, 0.16, 0.22, indLeftMat); indRL.position.set(-2.16, 0.78, -0.82);
+  const indFR = box(0.1, 0.16, 0.22, indRightMat); indFR.position.set(2.16, 0.7, 0.82);
+  const indRR = box(0.12, 0.16, 0.22, indRightMat); indRR.position.set(-2.16, 0.78, 0.82);
   body.add(indFL, indRL, indFR, indRR);
 
   body.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -204,6 +211,13 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
     /** Set the steering angle (radians). Front wheels + steering wheel follow. */
     setSteering(angle) {
       steer = THREE.MathUtils.clamp(angle, -MAX_STEER, MAX_STEER);
+    },
+
+    /** Orient the whole car: yaw about Y, then pitch (nose up = +pitch). */
+    setPose(yaw, pitch = 0) {
+      _qy.setFromAxisAngle(_Y, yaw);
+      _qp.setFromAxisAngle(_Z, pitch);
+      root.quaternion.copy(_qy).multiply(_qp);
     },
 
     setHeadlights(on) { headTarget = on ? 1 : 0; },

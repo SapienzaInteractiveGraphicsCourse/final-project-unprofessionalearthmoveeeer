@@ -10,6 +10,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 
 import { buildEnvironment } from './world/environment.js';
 import { buildExamGround } from './world/examGround.js';
+import { buildOverpass } from './world/overpass.js';
 import { buildCar } from './world/car.js';
 import { buildTrafficLight } from './world/trafficLight.js';
 import { Vehicle } from './vehicle.js';
@@ -43,6 +44,7 @@ const tweens = new TWEEN.Group();
 
 buildEnvironment(scene);
 const examGround = buildExamGround(scene);
+const overpass = buildOverpass(scene); // hill-start element just after START
 const car = buildCar({ color: 0xc62828, tweens });
 scene.add(car.group);
 
@@ -52,7 +54,7 @@ trafficLight.group.position.set(6.1, 0, -7.1);
 trafficLight.group.rotation.y = Math.PI; // face the oncoming (south-bound) car
 scene.add(trafficLight.group);
 
-const vehicle = new Vehicle(car, examGround.start);
+const vehicle = new Vehicle(car, examGround.start, overpass);
 const cameras = new CameraManager(camera, controls, car.group);
 
 // --- Examiner -------------------------------------------------------------

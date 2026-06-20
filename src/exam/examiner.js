@@ -17,6 +17,7 @@ const STOPLINE_Z = -CROSS_HW - 2.5; // traffic-light stop line on the north appr
 const COMMAND_DELAY = 1.5;  // seconds before "Start driving" is issued
 const TIME_LIMIT = 240;     // total exam time (s)
 const ABRUPT_ACCEL = -16;   // m/s² considered an abrupt stop
+const TURN_THRESHOLD = 1.0; // rad of sustained turn before a signal is required (~57°)
 
 export class Examiner {
   constructor(scoring, { vehicle, car, examGround, trafficLight }) {
@@ -54,6 +55,11 @@ export class Examiner {
     // abrupt braking
     this._wasFast = -10;
     this.lastAbrupt = -10;
+
+    // turn-signal monitoring
+    this.turnAccum = 0;
+    this.prevHeading = null;
+    this.turnPenTime = -10;
   }
 
   toggleSeatbelt() { this.seatbelt = !this.seatbelt; }
@@ -138,6 +144,22 @@ export class Examiner {
     if (Math.abs(v.x) > 64 || Math.abs(v.z) > 44) {
       sc.penalizeOnce('offcircuit', 'Global', 'Left the circuit area', 100, this.clock);
     }
+
+    // Turn signal required for any turn (accumulate sustained heading change).
+    if (this.prevHeading != null && Math.abs(v.speed) > 1.2) {
+      let dH = v.heading - this.prevHeading;
+      dH = Math.atan2(Math.sin(dH), Math.cos(dH)); // wrap to [-π, π]
+      if (this.turnAccum !== 0 && Math.sign(dH) !== Math.sign(this.turnAccum)) this.turnAccum = 0;
+      this.turnAccum += dH;
+      if (Math.abs(this.turnAccum) > TURN_THRESHOLD && this.clock - this.turnPenTime > 2.5) {
+        const dir = this.turnAccum > 0 ? 'left' : 'right'; // heading increasing = left
+        const ind = this.car.indicator;
+        if (ind !== dir && ind !== 'hazard') sc.penalize('Turn', `No turn signal (${dir} turn)`, 5, this.clock);
+        this.turnPenTime = this.clock;
+        this.turnAccum = 0;
+      }
+    }
+    this.prevHeading = v.heading;
 
     // Emergency stop.
     this._emergencyStop(dt);

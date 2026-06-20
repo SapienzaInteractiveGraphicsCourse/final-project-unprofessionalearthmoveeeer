@@ -12,11 +12,13 @@ const ENGINE_ACCEL = 9;      // m/s²
 const BRAKE_DECEL = 20;      // m/s²
 const ROLL_FRICTION = 3.2;   // m/s² coasting deceleration
 const STEER_SPEED = 3.0;     // how fast the steering angle eases to target
+const SLOPE_G = 10;          // along-slope gravity on ramps (hill-start feel)
 
 export class Vehicle {
-  constructor(car, start = { x: 0, z: 0, heading: 0 }) {
+  constructor(car, start = { x: 0, z: 0, heading: 0 }, terrain = null) {
     this.car = car;
     this.start = start;
+    this.terrain = terrain;   // optional { heightAt(x,z) } for the overpass
     this.x = start.x;
     this.z = start.z;
     this.heading = start.heading; // yaw, radians
@@ -94,9 +96,21 @@ export class Vehicle {
     this.x += this._dir.x * dist;
     this.z += this._dir.z * dist;
 
+    // --- Terrain (overpass): elevation, pitch and along-slope gravity ----
+    let y = 0, pitch = 0;
+    if (this.terrain) {
+      y = this.terrain.heightAt(this.x, this.z);
+      const e = 0.7;
+      const hf = this.terrain.heightAt(this.x + this._dir.x * e, this.z + this._dir.z * e);
+      const hb = this.terrain.heightAt(this.x - this._dir.x * e, this.z - this._dir.z * e);
+      pitch = Math.atan2(hf - hb, 2 * e);          // nose up on an uphill
+      this.speed += -SLOPE_G * Math.sin(pitch) * dt; // gravity pulls downhill
+      this.speed = THREE.MathUtils.clamp(this.speed, MAX_REV, MAX_FWD);
+    }
+
     // --- Push to the car node + animated parts ---------------------------
-    this.car.group.position.set(this.x, 0, this.z);
-    this.car.group.rotation.y = this.heading;
+    this.car.group.position.set(this.x, y, this.z);
+    this.car.setPose(this.heading, pitch);
     this.car.setSteering(this.steer);
     this.car.addRoll(dist);
     this.car.setBrake(this.braking || this.speed < -0.15);
