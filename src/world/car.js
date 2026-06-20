@@ -98,6 +98,17 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
   brakeR.position.z = -0.55;
   body.add(brakeR);
 
+  // Amber turn indicators (front + rear, both sides). Materials are per-side so
+  // we can blink left/right/hazard independently.
+  const amberMat = () => new THREE.MeshStandardMaterial({ color: 0x7a4a00, emissive: 0xff9500, emissiveIntensity: 0.0, roughness: 0.4 });
+  const indLeftMat = amberMat();
+  const indRightMat = amberMat();
+  const indFL = box(0.1, 0.16, 0.22, indLeftMat);  indFL.position.set(2.16, 0.7, 0.82);
+  const indRL = box(0.12, 0.16, 0.22, indLeftMat); indRL.position.set(-2.16, 0.78, 0.82);
+  const indFR = box(0.1, 0.16, 0.22, indRightMat); indFR.position.set(2.16, 0.7, -0.82);
+  const indRR = box(0.12, 0.16, 0.22, indRightMat); indRR.position.set(-2.16, 0.78, -0.82);
+  body.add(indFL, indRL, indFR, indRR);
+
   body.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
   // --- Doors (hinged at the front edge, swing outward) -------------------
@@ -172,6 +183,8 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
   let headOn = 0;         // 0..1 animated
   let headTarget = 0;
   let brake = 0;          // 0..1 animated
+  let indicator = 'off';  // 'off' | 'left' | 'right' | 'hazard'
+  let blinkT = 0;
 
   const applyDoors = () => {
     // +Z-side door swings toward +Z (outward); −Z-side door mirrors it.
@@ -195,6 +208,10 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
 
     setHeadlights(on) { headTarget = on ? 1 : 0; },
     setBrake(on) { brake = on ? 1 : 0; },
+
+    // Turn indicators: 'off' | 'left' | 'right' | 'hazard'.
+    setIndicator(mode) { indicator = mode; if (mode === 'off') blinkT = 0; },
+    get indicator() { return indicator; },
 
     // Smooth door swing via tween.js (eased, exploits the hinge hierarchy).
     toggleDoors() {
@@ -226,6 +243,12 @@ export function buildCar({ color = 0xc62828, tweens } = {}) {
 
       // Brake lenses glow harder while braking/reversing.
       brakeMat.emissiveIntensity = 0.2 + brake * 1.4;
+
+      // Turn indicators blink at ~2 Hz.
+      blinkT += dt;
+      const lit = indicator !== 'off' && (blinkT % 0.5) < 0.25 ? 1.5 : 0.0;
+      indLeftMat.emissiveIntensity = (indicator === 'left' || indicator === 'hazard') ? lit : 0.0;
+      indRightMat.emissiveIntensity = (indicator === 'right' || indicator === 'hazard') ? lit : 0.0;
     },
   };
 }
