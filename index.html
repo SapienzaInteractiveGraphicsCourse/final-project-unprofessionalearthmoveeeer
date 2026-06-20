@@ -31,6 +31,45 @@
       border-radius: 4px; padding: 0 5px; color: #fff; font-size: 12px;
     }
 
+    /* Examiner panel (top-right) */
+    #exam { top: 12px; right: 12px; min-width: 230px; }
+    #exam h1 { font-size: 13px; font-weight: 700; color: #ff9f68; margin-bottom: 6px; }
+    #exam .row { display: flex; justify-content: space-between; gap: 16px; }
+    #exam .row span:first-child { color: #9aa7b8; }
+    #exam .big { font-size: 22px; font-weight: 800; }
+    #exam .pts { color: #6fe08a; }            /* green when clean */
+    #exam .pts.warn { color: #ffd166; }
+    #exam .pts.bad { color: #ff6b6b; }
+    #exam .viol { color: #ff9aa2; font-size: 12px; margin-top: 4px; min-height: 16px; }
+
+    /* Centre prompt (start command / emergency stop) */
+    #prompt {
+      position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+      font-family: ui-monospace, Consolas, monospace; font-size: 18px; font-weight: 700;
+      color: #fff; background: rgba(20,24,33,0.82); border: 1px solid rgba(255,255,255,0.12);
+      padding: 8px 18px; border-radius: 10px; pointer-events: none; user-select: none;
+      text-align: center; transition: opacity .2s; opacity: 0;
+    }
+    #prompt.show { opacity: 1; }
+    #prompt.alert { color: #ffd166; border-color: #ffae3b; }
+
+    /* Result overlay */
+    #result {
+      position: fixed; inset: 0; display: none; place-items: center; z-index: 9;
+      background: rgba(8,10,14,0.55); backdrop-filter: blur(3px);
+      font-family: ui-monospace, Consolas, monospace; color: #fff;
+    }
+    #result.show { display: grid; }
+    #result .card {
+      background: rgba(20,24,33,0.95); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 28px 40px; text-align: center; min-width: 320px;
+    }
+    #result .verdict { font-size: 40px; font-weight: 900; letter-spacing: 1px; }
+    #result .verdict.pass { color: #6fe08a; }
+    #result .verdict.fail { color: #ff6b6b; }
+    #result .detail { color: #c2ccda; margin-top: 10px; line-height: 1.6; }
+    #result .hint { color: #8d99ab; margin-top: 14px; font-size: 13px; }
+
     #loading {
       position: fixed; inset: 0; display: grid; place-items: center;
       font-family: ui-monospace, Consolas, monospace; color: #9aa7b8;
@@ -62,12 +101,32 @@
     <div class="row"><span>Gear</span><b id="hud-gear">D</b></div>
     <div class="row"><span>Camera</span><b id="hud-camera">chase</b></div>
     <div class="row"><span>Headlights</span><b id="hud-lights">OFF</b></div>
+    <div class="row"><span>Seatbelt</span><b id="hud-belt">OFF</b></div>
+    <div class="row"><span>Signal</span><b id="hud-signal">—</b></div>
+  </div>
+
+  <div id="exam" class="panel">
+    <h1>Examiner</h1>
+    <div class="row"><span>Penalty</span><b class="big pts" id="hud-penalty">0</b></div>
+    <div class="row"><span>Time left</span><b id="hud-time">4:00</b></div>
     <div class="row"><span>Cones hit</span><b id="hud-cones">0 / 0</b></div>
+    <div class="viol" id="hud-viol"></div>
+  </div>
+
+  <div id="prompt"></div>
+
+  <div id="result">
+    <div class="card">
+      <div class="verdict" id="result-verdict">—</div>
+      <div class="detail" id="result-detail"></div>
+      <div class="hint">Press <b>R</b> to restart the exam</div>
+    </div>
   </div>
 
   <div id="help" class="panel">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows drive ·
-    <kbd>C</kbd> camera · <kbd>L</kbd> lights · <kbd>O</kbd> doors · <kbd>R</kbd> reset
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive ·
+    <kbd>Q</kbd>/<kbd>E</kbd> signal · <kbd>H</kbd> hazard · <kbd>B</kbd> belt ·
+    <kbd>C</kbd> cam · <kbd>L</kbd> lights · <kbd>O</kbd> doors · <kbd>Enter</kbd> finish · <kbd>R</kbd> reset
   </div>
 
   <div id="loading">Loading…</div>

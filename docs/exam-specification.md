@@ -204,19 +204,19 @@ spec adds a **gameplay/examiner layer**. Required new systems:
 
 | System | Purpose | Status |
 | --- | --- | --- |
-| **Scoring engine** | Cumulative penalties, tiers, fail at ≥100, event log, end banner | to build |
-| **Exam state machine** | Sequence Phases 1→2, per-exercise enter/complete, global timer | to build |
-| **Start sequence** | "Start driving" cue, 30 s/20 s timers, seatbelt, left-indicator-before-line | to build |
-| **Turn indicators + hazards** | Blinking signals on the car; required by start/intersection/emergency-stop rules | to build (car has light meshes) |
-| **Engine stall model** | Stall on botched launch / ramp | extend `vehicle.js` |
-| **Traffic light** | Signal cycle + stop-line + restrictive-signal detection | to build |
+| **Scoring engine** | Cumulative penalties, tiers, fail at ≥100, event log, end banner | **done** (`exam/scoring.js`) |
+| **Exam state machine** | Sequence Phases 1→2, per-exercise enter/complete, global timer | partial — start + globals (`exam/examiner.js`); full 8-exercise sequencing pending |
+| **Start sequence** | "Start driving" cue, 30 s/20 s timers, seatbelt, left-indicator-before-line | **done** |
+| **Turn indicators + hazards** | Blinking signals on the car; required by start/intersection/emergency-stop rules | **done** (`car.js`) |
+| **Engine stall model** | Stall on botched launch / ramp | **done** (throttle+brake near standstill) |
+| **Traffic light** | Signal cycle + stop-line + restrictive-signal detection | **done** (`trafficLight.js`, north approach) |
 | **Hill ramp (estakada)** | Incline geometry + gravity + rollback + STOP tolerance | to build |
 | **90° corridor / turnaround yard** | Boundary polylines, crossing + reverse counters | to build |
 | **Reverse garage + parallel parking** | Bay bounds, entry line, containment + reverse counters | bays exist visually; logic to build |
 | **Railway crossing** | Rails + STOP, full-stop + on-rails checks | to build |
-| **Emergency stop event** | Random siren, brake-≤2 s + hazards-≤3 s timing | to build |
-| **Lane / circuit bounds** | Oncoming-lane & off-circuit detection | to build |
-| **HUD/examiner UI** | Total, last violation, timer, current exercise, result | extend current HUD |
+| **Emergency stop event** | Random siren, brake-≤2 s + hazards-≤3 s timing | **done** (visual prompt) |
+| **Lane / circuit bounds** | Oncoming-lane & off-circuit detection | **done** off-circuit; oncoming-lane pending |
+| **HUD/examiner UI** | Total, last violation, timer, current exercise, result | **done** (examiner panel + prompt + result banner) |
 
 Already in place that the layer builds on: drivable hierarchical car, autodrome
 (loop road, intersection visuals, slalom + serpentine cones, parking box +
