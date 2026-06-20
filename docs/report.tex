@@ -1,0 +1,498 @@
+\documentclass[11pt]{article}
+
+% ---------------------------------------------------------------------------
+% Kazakhstan Practical Driving Exam Simulator — project report
+% Interactive Graphics, Sapienza University of Rome.
+% Compile with pdfLaTeX (MiKTeX): pdflatex report.tex  (run twice for the ToC).
+% ---------------------------------------------------------------------------
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}   % outline fonts: correct ligatures + copy-pasteable text
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+% --- Running header: short title left, page number right --------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Driving Exam Simulator}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Code listing style (JavaScript) ---------------------------------------
+\definecolor{kw}{rgb}{0.55,0.10,0.45}
+\definecolor{cmt}{rgb}{0.40,0.45,0.50}
+\definecolor{str}{rgb}{0.10,0.45,0.25}
+\definecolor{numcol}{rgb}{0.55,0.55,0.55}
+\definecolor{codebg}{rgb}{0.975,0.975,0.975}
+
+\lstdefinelanguage{JS}{
+  keywords={const,let,var,function,return,if,else,for,of,in,new,this,class,
+            export,import,from,true,false,null,undefined,get,set,Math},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  sensitive=true,
+}
+\lstset{
+  language=JS,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{kw},
+  commentstyle=\itshape\color{cmt},
+  stringstyle=\color{str},
+  numbers=left,
+  numberstyle=\tiny\color{numcol},
+  numbersep=9pt,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!25},
+  breaklines=true,
+  showstringspaces=false,
+  captionpos=b,
+  tabsize=2,
+  aboveskip=1.1em,
+  belowskip=0.6em,
+}
+\renewcommand{\lstlistingname}{Listing}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ===========================================================================
+\begin{document}
+
+% --- Title page ------------------------------------------------------------
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries Kazakhstan Practical\\[2mm] Driving Exam Simulator\par}
+  \vspace{4mm}
+  {\large Category~B - Astana Autodrome\par}
+  \vspace{2cm}
+
+  % TODO: replace with the real team member names and student emails.
+  \begin{tabular}{cc}
+    \large Damir Tassybayev \\
+    \texttt{tassybayev.kostanay@gmail.com} \\[4mm]
+  \end{tabular}
+
+  \vspace{2cm}
+  {Course: Interactive Graphics\par}
+  {Instructor: Prof.\ Marco Schaerf\par}
+  {Sapienza University of Rome\par}
+
+  \vfill
+  % To add a cover image: \includegraphics[width=0.6\textwidth]{figures/cover.png}
+\end{titlepage}
+
+\thispagestyle{fancy}
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Introduction}
+
+This project is a browser-based 3D simulation of the \textbf{practical driving
+examination of the Republic of Kazakhstan} for the category-B licence. The
+player drives a car around a faithful recreation of an Astana \emph{autodrome}
+(driving-test ground) and is graded, in real time, by an automated examiner that
+reproduces the official penalty system: turn-signal checkpoints, a hill start
+(\emph{estakada}), traffic lights, boundary lines, and two timed parking
+exercises. The simulator was developed as the final project for the Interactive
+Graphics course at Sapienza University of Rome.
+
+\subsection{Graphics environment}
+
+The application runs in the browser through WebGL, using \textbf{Three.js}
+(release r160) as the rendering layer and \textbf{tween.js} for eased
+interpolation. The renderer is a \code{WebGLRenderer} with antialiasing enabled,
+the \code{sRGB} output colour space, soft shadows (\code{PCFSoftShadowMap}), and
+a device pixel ratio capped at~2 to avoid over-drawing on high-DPI screens.
+
+A deliberate design choice is that the project has \textbf{no build step}. All
+modules are native ES modules resolved through an \code{importmap} in
+\code{index.html}, and every third-party library is vendored locally under
+\code{lib/}. This keeps the repository self-contained and lets it run directly
+from GitHub Pages (or any static file server) without bundling.
+
+\subsection{Running the simulator}
+
+Because the project uses ES modules, it must be served over HTTP rather than
+opened from the file system. Any static server works, for example:
+
+\begin{lstlisting}[language={},caption={Running the simulator locally.}]
+python -m http.server 8000     # from the repository root
+# then open http://localhost:8000
+\end{lstlisting}
+
+It has been tested on Chromium-based browsers and Firefox on Windows. Because the
+controls are keyboard-driven, mobile devices are not supported.
+
+% ===========================================================================
+\section{User Manual}
+
+\subsection{Premise and objective}
+
+The candidate starts the car at the \textsc{start} box at the top of the
+autodrome and drives a fixed route through a sequence of exercises. The automated
+examiner accumulates \emph{penalty points} for mistakes. The examination is
+\textbf{passed} if, and only if, the candidate completes the course and the
+cumulative penalty stays \emph{below 100 points}; reaching 100 points, whether
+through one critical error or several smaller ones, ends the examination
+immediately as a failure. Penalties fall into three severity tiers, summarised in
+Table~\ref{tab:tiers}.
+
+\begin{table}[h]
+  \centering
+  \caption{Penalty severity tiers.}
+  \label{tab:tiers}
+  \begin{tabular}{rll}
+    \toprule
+    Points & Severity & Examples \\
+    \midrule
+    100 & Critical (instant fail) & Crossing on a red/yellow light; not finishing a parking in time \\
+    25  & Major violation & Missing a full stop; heavy hill rollback \\
+    5   & Minor mistake & Missing a turn signal at a checkpoint \\
+    20  & Boundary touch & A wheel on a penalty (boundary) line \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Controls}
+
+The car is driven with the keyboard; the mouse orbits the camera only in the
+free-orbit view. The full scheme is listed in Table~\ref{tab:controls}.
+
+\begin{table}[h]
+  \centering
+  \caption{Controls.}
+  \label{tab:controls}
+  \begin{tabular}{ll}
+    \toprule
+    Input & Action \\
+    \midrule
+    \texttt{W} / \texttt{S} or $\uparrow$ / $\downarrow$ & Accelerate / brake and reverse \\
+    \texttt{A} / \texttt{D} or $\leftarrow$ / $\rightarrow$ & Steer left / right \\
+    \texttt{Space} & Full-stop handbrake (toggle) \\
+    \texttt{Q} / \texttt{E} & Left / right turn signal (toggle) \\
+    \texttt{H} & Hazard lights (toggle) \\
+    \texttt{C} & Cycle the camera view \\
+    \texttt{L} & Toggle the headlights \\
+    \texttt{O} & Open / close the doors \\
+    \texttt{R} & Reset the car and the examination \\
+    Mouse drag / wheel & Orbit / zoom (in the \emph{orbit} camera only) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Camera modes}
+
+The \texttt{C} key cycles four views, handled by the \code{CameraManager}. The
+default \emph{fixed} view is rigidly bolted to the car: it translates and rotates
+with the body so the car always sits in the same place on screen. \emph{Cockpit}
+places the camera at the driver's seat looking forward. \emph{Top} looks straight
+down, useful for the parking exercises. \emph{Orbit} frees the camera with
+\code{OrbitControls} so the player can drag and zoom around the car. The
+non-orbit modes are positioned each frame from a car-local offset converted to
+world space, so they follow the body exactly.
+
+\subsection{HUD overview}
+
+Two panels overlay the scene. The top-left panel reports the live vehicle state:
+speed in km/h, gear (D, R or P when the handbrake is engaged), the active camera,
+the headlight state, and the current turn signal. The top-right \emph{examiner}
+panel shows the running penalty total, colour-coded from green to amber to red as
+it climbs, together with the most recent violation. When the examination ends, a
+full-screen overlay announces \textsc{passed} or \textsc{failed} with the final
+penalty total and, on failure, the reason.
+
+% ===========================================================================
+\section{The Car: hierarchical model}
+
+The car is the project's complex hierarchical model and is built entirely in code
+in \code{world/car.js}; nothing about it is imported, in line with the course rule
+that animations may not be imported.
+
+\subsection{Part hierarchy and assembly}
+
+The car is a tree of \code{THREE.Group} nodes. The root node carries the whole
+car and is the only node the driving model moves; every child therefore follows
+automatically. The hierarchy is:
+
+\begin{itemize}
+  \item \textbf{root} \textemdash{} position and heading set by the driving model;
+  \begin{itemize}
+    \item \textbf{body} \textemdash{} lower body, cabin, glass band, chrome
+      bumpers, seats; the emissive head-, brake- and indicator-light lenses; the
+      two hinged \emph{doors}; and the \emph{steering wheel} (a torus nested in
+      two helper groups so it can spin about its own axle regardless of its tilt);
+    \item \textbf{front-left} and \textbf{front-right pivots} \textemdash{} each a
+      group that yaws for steering and contains a wheel that spins for rolling;
+    \item \textbf{rear-left} and \textbf{rear-right wheels} \textemdash{} spin only;
+    \item \textbf{two head\-light spot lights} aimed forward.
+  \end{itemize}
+\end{itemize}
+
+The car's local forward direction is $+X$ and up is $+Y$. Key dimensions are a
+half-wheelbase of \SI{1.45}{m}, a half-track of \SI{0.82}{m}, a wheel radius of
+\SI{0.42}{m} and a steering lock of \code{MAX\_STEER} $= 0.52$ rad ($\approx
+30^\circ$). Because the front wheels are children of their steering pivots, they
+turn in place and still roll correctly; this two-level joint/visual split is what
+lets every joint rotate independently without disturbing the others.
+
+\subsection{Materials and lights}
+
+The body uses \code{MeshStandardMaterial} instances (metallic paint, dark glass,
+chrome bumpers, rubber tyres). The light lenses use emissive materials whose
+intensity is animated: the headlight lenses and two non-shadowing
+\code{SpotLight}s fade in when the lights are toggled, the brake lenses brighten
+while braking or reversing, and the amber indicator lenses blink at about
+\SI{2}{Hz}. Car-local \emph{left} is the $-Z$ side and \emph{right} is $+Z$, so
+the left/right indicators light the correct side of the body.
+
+% ===========================================================================
+\section{The Autodrome (environment)}
+
+\subsection{Map image and pixel-to-world mapping}
+
+The driving ground is a single photographic image of a real Astana autodrome,
+laid flat on a textured plane (\code{world/examGround.js}). The image
+($1237\times848$~px) is loaded asynchronously with \code{TextureLoader} and the
+ground plane is sized to the \emph{same aspect ratio}, so a pixel on the image
+maps exactly to a point on the ground. The plane is oriented so that the image
+top is world north ($-Z$) and the image right is world east ($+X$).
+
+Every element of the examination is positioned by reading its location directly
+off the image in pixels and converting it with the helper in
+\code{world/mapCoords.js}:
+
+\begin{lstlisting}[caption={Pixel-to-world mapping (\code{mapCoords.js}).}]
+export function px2world(px, py) {
+  return {
+    x: (px / IMG_W - 0.5) * AUTO_W,   // 0..IMG_W  (left->right)  -> world X
+    z: (py / IMG_H - 0.5) * AUTO_H,   // 0..IMG_H  (top->bottom)  -> world Z
+  };
+}
+\end{lstlisting}
+
+This single source of truth keeps "what is painted on the image" and "what the
+car interacts with" in agreement: the car start, the hill, and all examination
+lines are expressed in image pixels and converted through \code{px2world}.
+
+\subsection{The overpass (estakada)}
+
+The hill-start exercise is a real raised structure built in \code{world/overpass.js}.
+Its footprint is taken from image pixels (it spans image $x=550$ on the east,
+where the west-bound car arrives, to $x=210$ on the west). The deck is an
+extruded side profile: an up-ramp, a flat crest carrying a painted \textsc{stop}
+line and a \textsc{stop} sign on the right edge, and a down-ramp. A height
+function returns the deck elevation at any point, and zero elsewhere:
+
+\begin{lstlisting}[caption={Overpass deck height (\code{overpass.js}).}]
+function heightAt(x, z) {
+  if (z < z0 || z > z1 || x > xA || x < xD) return 0;
+  if (x >= xB) return H * (xA - x) / (xA - xB); // up ramp
+  if (x <= xC) return H * (x - xD) / (xC - xD); // down ramp
+  return H;                                     // crest
+}
+\end{lstlisting}
+
+The driving model samples this function so the car physically rides up, over and
+down the deck (Section~\ref{sec:terrain}).
+
+\subsection{Course markings and traffic lights}
+
+The examination lines that must be visible are drawn on the ground by
+\code{world/courseMarks.js}: the boundary ``penalty'' lines as thin black strips,
+and a red stop line at each traffic-light location. At each traffic light a small
+hierarchical light model (post, housing and three lamps) is placed and driven by a
+green\,$\to$\,yellow\,$\to$\,red cycle, desynchronised between lights. The
+remaining rule lines (turn-signal, full-stop, parking, finish) are invisible
+triggers by default to keep the photographic map clean; a debug flag draws them
+all for verification.
+
+\subsection{Lighting and shadows}
+
+The scene is lit by a \code{HemisphereLight} ambient term, so no surface is fully
+black, and a \code{DirectionalLight} acting as the sun, which casts the scene
+shadows through a $2048\times2048$ shadow map. The car's headlights add two
+forward spot lights at night. Shadows use percentage-closer filtering for soft
+edges, and the renderer works in the sRGB colour space for correct tone.
+
+% ===========================================================================
+\section{Driving model}
+\label{sec:terrain}
+
+\subsection{Kinematic bicycle model}
+
+The car is driven by a kinematic \emph{bicycle model} (\code{vehicle.js}); no
+physics engine is used, keeping the motion light and predictable. The state is
+the planar position $(x,z)$, the heading $\psi$, the signed speed $v$, and the
+current steering angle $\delta$. Throttle accelerates, braking decelerates and
+then engages reverse, and releasing both applies rolling friction toward zero.
+With wheelbase $L=\SI{2.9}{m}$ the pose integrates as
+
+\[
+  \dot{\psi} = \frac{v}{L}\tan\delta,
+  \qquad
+  \dot{x} = v\cos\psi,
+  \qquad
+  \dot{z} = -\,v\sin\psi .
+\]
+
+Speed is clamped to $[-5,\,15]\ \mathrm{m/s}$ ($\approx -18$ to $54$~km/h) and the
+steering lock is reduced at higher speed for stability. The travelled distance is
+fed back to the wheels so the rolling animation always matches the real speed.
+
+\begin{lstlisting}[caption={Pose integration (\code{vehicle.js}).}]
+if (Math.abs(this.speed) > 1e-3) {
+  this.heading += (this.speed / WHEELBASE) * Math.tan(this.steer) * dt;
+}
+this._dir.set(Math.cos(this.heading), 0, -Math.sin(this.heading));
+const dist = this.speed * dt;
+this.x += this._dir.x * dist;
+this.z += this._dir.z * dist;
+\end{lstlisting}
+
+\subsection{Riding the terrain}
+
+When the car is over the overpass, the model raises it to the deck height and
+pitches it to the local slope. The pitch is taken from two height samples a short
+distance $e$ ahead of and behind the car along its travel direction, and a
+component of gravity along the slope is added to the speed, so the hill must be
+actively held:
+
+\[
+  \theta_{\mathrm{pitch}} = \operatorname{atan2}\!\big(h_f - h_b,\ 2e\big),
+  \qquad
+  \dot v \mathrel{+}= -\,g\,\sin\theta_{\mathrm{pitch}} .
+\]
+
+The resulting position and orientation are pushed to the car root as a quaternion
+(yaw then pitch), so the body sits correctly on the ramp.
+
+\subsection{Handbrake and stall}
+
+Pressing \texttt{Space} toggles a full-stop handbrake: the speed is forced to zero
+and throttle is ignored until it is released, with the brake lights held on. The
+model also detects a stall when throttle and brake are held together near a
+standstill, which is reported to the examiner.
+
+% ===========================================================================
+\section{Animations}
+
+All animation is computed in JavaScript every frame; nothing is imported.
+
+\begin{itemize}
+  \item \textbf{Wheels.} All four wheels spin about their axle by an angle that
+    advances with the travelled distance, $\Delta\theta = \dfrac{\mathrm{d}s}{r}$,
+    where $r$ is the wheel radius. The two front wheels additionally yaw with the
+    steering pivots.
+  \item \textbf{Steering wheel.} The cabin steering wheel rotates about its own
+    axle proportionally to the steering angle.
+  \item \textbf{Doors.} Each door is a hinge group; opening and closing is driven
+    by \textbf{tween.js} with a \code{Quadratic.Out} easing for a smooth swing.
+  \item \textbf{Lights.} Headlight and brake intensities ease toward their target;
+    the turn indicators blink; the brake lenses respond to braking and reversing.
+  \item \textbf{Traffic lights.} Each light advances through its
+    green/yellow/red cycle and updates the emissive lamp intensities.
+\end{itemize}
+
+% ===========================================================================
+\section{The examiner: scoring system}
+
+The examination logic is a generic, data-driven engine that reads a course
+definition and applies a rule per element each frame, accumulating penalties.
+
+\subsection{Scoring engine}
+
+The \code{Scoring} class (\code{exam/scoring.js}) keeps a running total and an
+ordered event log, and fails the examination as soon as a critical (100-point)
+penalty fires or the total reaches the threshold:
+
+\begin{lstlisting}[caption={Penalty accumulation (\code{scoring.js}).}]
+penalize(exercise, rule, points, t = 0) {
+  if (this.isOver) return;
+  this.total += points;
+  this.log.push({ t, exercise, rule, points });
+  this.lastViolation = this.log[this.log.length - 1];
+  if (points >= FAIL_THRESHOLD || this.total >= FAIL_THRESHOLD) {
+    this.status = 'failed';
+    this.failReason = rule;
+  }
+}
+\end{lstlisting}
+
+\subsection{Data-driven course}
+
+The whole route lives in one editable configuration file,
+\code{exam/course.js}, with every position expressed in image pixels. It groups
+the elements by type: \emph{signal lines} (a crossing requires a given indicator),
+\emph{light lines} (a crossing on red/yellow fails), a \emph{stop line} (a full
+stop is required before crossing), \emph{penalty lines} (a wheel on the line
+costs points), two timed \emph{parkings}, and the \emph{finish line}. The engine
+(\code{exam/exam.js}) converts each pixel segment to a world segment once at
+start-up and then evaluates it generically.
+
+\subsection{Line-crossing detection}
+
+The car is reduced to a reference point (its front axle) and its four wheels in
+world space. A line is the segment $A\!\to\!B$; the side of the car relative to
+the line is the sign of the 2-D cross product
+
+\[
+  s = (B_x - A_x)(P_z - A_z) - (B_z - A_z)(P_x - A_x).
+\]
+
+A crossing is registered when $s$ flips sign between frames \emph{and} the
+projection of $P$ onto the segment lies within its extent. Each rule then reacts:
+a signal line checks the active indicator, a light line reads its traffic
+signal, the stop line checks that a one-second stop was registered nearby, and the
+finish line ends the examination. The penalty (boundary) lines instead use a
+point-to-segment distance against each wheel, with a short cooldown so a wheel
+resting on a line is charged once rather than every frame.
+
+\subsection{Parking and hill exercises}
+
+Each parking exercise arms when the car crosses its trigger line and then gives a
+fixed time budget (30~s). It succeeds when the required wheels (the two rear
+wheels for the $90^\circ$ box, the two right wheels for parallel parking) are held
+stationary inside the target line for one second; if the budget expires first, the
+examination fails. The hill exercise is scored against the overpass footprint:
+rolling back more than \SI{30}{cm} from the furthest-forward point, or stopping
+more than \SI{0.5}{m} from the \textsc{stop} line (or not stopping at all), each
+costs a major penalty.
+
+% ===========================================================================
+\section{Resource attribution}
+
+\paragraph{Libraries (not developed by the team).}
+\begin{itemize}
+  \item \textbf{Three.js} (MIT) \textemdash{} \url{https://threejs.org/}; release
+    r160, used for rendering, the scene graph and the \code{OrbitControls} addon.
+  \item \textbf{tween.js} (MIT) \textemdash{}
+    \url{https://github.com/tweenjs/tween.js/}; eased interpolation for the door
+    animation.
+\end{itemize}
+Both libraries are vendored under \code{lib/} so the repository is self-contained.
+
+\paragraph{Assets.}
+The autodrome ground is a single photographic top-down image of an Astana
+driving-test ground (\code{assets/textures/autodrome.png}). All other geometry
+(the car, the overpass, the traffic lights, the course markings) and all
+animation are generated in code by the team; no 3D models or animation clips are
+imported.
+
+\paragraph{Code.}
+All application code under \code{src/} was written by the team. The procedural
+asphalt textures are generated at run time on an HTML canvas.
+
+\end{document}

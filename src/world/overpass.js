@@ -1,9 +1,7 @@
-// The overpass / hill-start element ("estakada"), placed on the start road.
-// Positioned from image pixels: it spans image x = 550 (east, where the
-// west-bound car arrives) to x = 210 (west). The car rides up a ramp, over a
-// flat crest (STOP line + STOP sign), and down the far side.
-//
-// Only X was given, so the road row is taken as the start row (image y ≈ 45).
+// The overpass / hill-start element ("estakada"). Placed from image pixels:
+// it spans image x = 550 (east, where the west-bound car arrives) to x = 210
+// (west). The car rides up a ramp, over a flat crest (STOP line + STOP sign),
+// and down the far side. Road row is image y = 35.
 
 import * as THREE from 'three';
 import { pxX, pxZ } from './mapCoords.js';
@@ -11,8 +9,8 @@ import { pxX, pxZ } from './mapCoords.js';
 const EAST = pxX(550);   // up-ramp bottom (car arrives here first, driving −X)
 const WEST = pxX(210);   // down-ramp bottom
 const RAMP = 11;         // ramp run (m)
-const ZC = pxZ(45);      // road centre row (= START row)
-const HALFW = 4.2;       // road half-width
+const ZC = pxZ(35);      // road centre row (10 px above the start row)
+const HALFW = 3.5;       // road half-width
 
 export const OVERPASS = {
   xA: EAST, xB: EAST - RAMP, xC: WEST + RAMP, xD: WEST,
@@ -26,7 +24,7 @@ export function buildOverpass(scene) {
   const group = new THREE.Group();
   scene.add(group);
 
-  // Bridge body: extrude the side profile across the road width.
+  // Bridge body: extrude the side profile across the road width (no parapets).
   const shape = new THREE.Shape();
   shape.moveTo(xA, 0);
   shape.lineTo(xB, H);
@@ -41,15 +39,6 @@ export function buildOverpass(scene) {
   bridge.castShadow = true; bridge.receiveShadow = true;
   group.add(bridge);
 
-  // Side parapets along both deck edges.
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd9d9dc, roughness: 0.8 });
-  for (const z of [z0 + 0.15, z1 - 0.15]) {
-    const w = new THREE.Mesh(new THREE.BoxGeometry(xA - xD, 0.35, 0.2), wallMat);
-    w.position.set((xA + xD) / 2, H + 0.18, z);
-    w.castShadow = true;
-    group.add(w);
-  }
-
   // STOP line painted across the crest entry.
   const stop = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.04, z1 - z0 - 0.6),
@@ -58,8 +47,8 @@ export function buildOverpass(scene) {
   stop.position.set(stopX, H + 0.03, (z0 + z1) / 2);
   group.add(stop);
 
-  // STOP sign beside the crest.
-  group.add(makeStopSign(stopX + 0.2, z1 + 0.4, H));
+  // STOP sign on the RIGHT edge (z0 side = driver's right when heading west).
+  group.add(makeStopSign(stopX, z0 - 0.2, H));
 
   // Deck height at (x, z); 0 elsewhere.
   function heightAt(x, z) {
@@ -84,7 +73,8 @@ function makeStopSign(x, z, baseY) {
   post.castShadow = true;
   g.add(post);
 
-  const signGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.06, 8);
+  // Red octagon facing the approaching (east-bound view) driver: normal ±X.
+  const signGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.06, 8);
   signGeo.rotateZ(Math.PI / 2);
   signGeo.rotateX(Math.PI / 8);
   const sign = new THREE.Mesh(
@@ -95,12 +85,40 @@ function makeStopSign(x, z, baseY) {
   sign.castShadow = true;
   g.add(sign);
 
-  const bar = new THREE.Mesh(
-    new THREE.BoxGeometry(0.04, 0.12, 0.62),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x222222, roughness: 0.6 })
+  // "STOP" text plate on the +X face (toward the oncoming car).
+  const tex = makeStopTexture();
+  const plate = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.82, 0.82),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
   );
-  bar.position.set(0.32, baseY + 2.0, 0);
-  g.add(bar);
+  plate.position.set(0.05, baseY + 2.0, 0);
+  plate.rotation.y = Math.PI / 2; // face +X
+  g.add(plate);
 
   return g;
+}
+
+function makeStopTexture() {
+  const s = 256;
+  const c = document.createElement('canvas'); c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, s, s);
+  // red octagon
+  ctx.fillStyle = '#cc1f1f';
+  ctx.beginPath();
+  const r = s * 0.48, cx = s / 2, cy = s / 2;
+  for (let i = 0; i < 8; i++) {
+    const a = Math.PI / 8 + i * Math.PI / 4;
+    const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.lineWidth = s * 0.05; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${s * 0.26}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('STOP', cx, cy);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }

@@ -12,6 +12,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { buildEnvironment } from './world/environment.js';
 import { buildExamGround } from './world/examGround.js';
 import { buildOverpass } from './world/overpass.js';
+import { buildCourseMarks } from './world/courseMarks.js';
 import { buildCar } from './world/car.js';
 import { Vehicle } from './vehicle.js';
 import { Keyboard } from './input.js';
@@ -44,12 +45,13 @@ const tweens = new TWEEN.Group();
 buildEnvironment(scene);
 const examGround = buildExamGround(scene);
 const overpass = buildOverpass(scene); // hill-start element (image x 550→210)
+const courseMarks = buildCourseMarks(scene); // black penalty lines + traffic lights
 const car = buildCar({ color: 0xc62828, tweens });
 scene.add(car.group);
 
 const vehicle = new Vehicle(car, examGround.start, overpass);
 const cameras = new CameraManager(camera, controls, car.group);
-const exam = new Exam(vehicle, car);
+const exam = new Exam(vehicle, car, courseMarks.signals);
 
 // --- Input ----------------------------------------------------------------
 const keys = new Keyboard();
@@ -62,15 +64,17 @@ keys.tap('Space', () => { vehicle.handbrake = !vehicle.handbrake; });
 keys.tap('KeyQ', () => car.setIndicator(car.indicator === 'left' ? 'off' : 'left'));
 keys.tap('KeyE', () => car.setIndicator(car.indicator === 'right' ? 'off' : 'right'));
 keys.tap('KeyH', () => car.setIndicator(car.indicator === 'hazard' ? 'off' : 'hazard'));
-keys.tap('KeyR', () => { vehicle.reset(); car.setIndicator('off'); exam.reset(); });
+keys.tap('KeyR', () => {
+  vehicle.reset(); car.setIndicator('off'); exam.reset();
+  resultShown = false; result.style.display = 'none';
+});
 
 // --- HUD ------------------------------------------------------------------
-// Hide the prompt/result overlays (no full exam flow yet); keep the panel for
-// the running penalty total.
-for (const id of ['prompt', 'result']) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
-}
+document.getElementById('prompt').style.display = 'none';
+const result = document.getElementById('result');
+result.style.display = 'none';
+const resultVerdict = document.getElementById('result-verdict');
+const resultDetail = document.getElementById('result-detail');
 
 const hud = {
   speed: document.getElementById('hud-speed'),
@@ -84,6 +88,7 @@ const hud = {
 hud.camera.textContent = cameras.mode;
 document.getElementById('hud-time').textContent = '—';
 document.getElementById('hud-cones').textContent = '—';
+let resultShown = false;
 
 // --- Resize ---------------------------------------------------------------
 window.addEventListener('resize', () => {
@@ -106,12 +111,12 @@ function animate() {
 
   vehicle.update(dt, throttle, steerIn, up && dn);
   car.update(dt);
+  courseMarks.update(dt);
   exam.update(dt);
   tweens.update(performance.now());
   cameras.update();
 
   hud.speed.textContent = Math.round(vehicle.speedKmh);
-  hud.gear.textContent = vehicle.handbrake ? 'P' : vehicle.gear;
   hud.lights.textContent = headlightsOn ? 'ON' : 'OFF';
   hud.signal.textContent = ({ left: '◄ left', right: 'right ►', hazard: 'hazard', off: '—' })[car.indicator];
 
@@ -119,6 +124,18 @@ function animate() {
   hud.penalty.textContent = sc.total;
   hud.penalty.className = 'big pts' + (sc.total >= 100 ? ' bad' : sc.total >= 50 ? ' warn' : '');
   hud.viol.textContent = sc.lastViolation ? `−${sc.lastViolation.points}  ${sc.lastViolation.rule}` : '';
+  hud.gear.textContent = vehicle.handbrake ? 'P' : (exam.activeExercise ? '⏱' : vehicle.gear);
+
+  if (sc.isOver && !resultShown) {
+    resultShown = true;
+    const passed = sc.status === 'passed';
+    resultVerdict.textContent = passed ? 'PASSED' : 'FAILED';
+    resultVerdict.className = 'verdict ' + (passed ? 'pass' : 'fail');
+    resultDetail.innerHTML = passed
+      ? `Total penalty: <b>${sc.total}</b> / 100`
+      : `Total penalty: <b>${sc.total}</b><br>Reason: ${sc.failReason || '—'}`;
+    result.style.display = 'grid';
+  }
 
   renderer.render(scene, camera);
 }

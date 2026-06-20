@@ -10,5 +10,13 @@ slides/
 test.md
 newtest.md
 
+# LaTeX build artifacts (docs/report.tex compiles to report.pdf)
+*.aux
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
 # NOTE: /lib (vendored Three.js + tween.js) is intentionally committed.
 # The course requires the repo to contain ALL source code, including libraries.
