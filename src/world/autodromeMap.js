@@ -38,7 +38,9 @@ export const LAYOUT = {
     { x: parkBays[1].cx, z: parkBays[1].cz, ry: 0, color: 0x2f6fb0 },
     { x: garageBays[2].cx, z: garageBays[2].cz, ry: Math.PI, color: 0x2c8a4a },
   ],
-  start: { x: -44, z: 0, heading: 0 },
+  // START: on the top straight of the loop road (centre-right, just left of the
+  // parking zone), facing −X to follow the top-road arrows — as in the reference.
+  start: { x: 6, z: -33.5, heading: Math.PI },
 };
 
 // --- texture --------------------------------------------------------------
@@ -120,6 +122,13 @@ export function makeAutodromeTexture() {
     [-30, -10], [30, -9], [-30, 10], [30, 9], [0, -10], [0, 10], [-10, 0], [10, 0],
   ];
   markers.forEach(([x, z], i) => marker(ctx, X(x), Z(z), M(0.9), i + 1));
+
+  // 4b) START marker on the top road.
+  const startZ = RING.z0 + RING.w / 2; // top-road centre line
+  ctx.fillStyle = '#eef0f2';
+  ctx.fillRect(X(2) - M(0.28), Z(RING.z0 + 0.4), M(0.56), M(RING.w - 0.8)); // transverse line
+  ctx.fillStyle = '#d23b3b';
+  label(ctx, X(13), Z(startZ), M(1.7), 'START');
 
   // 5) Title + perimeter line.
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
