@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.vscode/
+.idea/
+slides/
+# Local placeholder files from the empty starter repo
+test.md
+newtest.md
+
+# NOTE: /lib (vendored Three.js + tween.js) is intentionally committed.
+# The course requires the repo to contain ALL source code, including libraries.

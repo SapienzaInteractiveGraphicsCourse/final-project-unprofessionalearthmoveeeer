@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kazakhstan Driving Exam Simulator — B Category, Astana</title>
+  <style>
+    :root { --hud-bg: rgba(20, 24, 33, 0.78); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0e14; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+
+    .panel {
+      position: fixed;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 13px; color: #e7ecf3;
+      background: var(--hud-bg); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 10px 14px; line-height: 1.55;
+      backdrop-filter: blur(6px); pointer-events: none; user-select: none;
+    }
+    #hud { top: 12px; left: 12px; min-width: 210px; }
+    #hud h1 { font-size: 13px; font-weight: 700; color: #ffd166; margin-bottom: 6px; }
+    #hud .row { display: flex; justify-content: space-between; gap: 16px; }
+    #hud .row span:first-child { color: #9aa7b8; }
+    #hud b { color: #ffd166; font-weight: 700; }
+
+    #help { bottom: 12px; left: 12px; color: #c2ccda; }
+    #help kbd {
+      background: #2a3240; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px; padding: 0 5px; color: #fff; font-size: 12px;
+    }
+
+    #loading {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      font-family: ui-monospace, Consolas, monospace; color: #9aa7b8;
+      background: #0b0e14; transition: opacity .4s ease; z-index: 10;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+  </style>
+
+  <!--
+    No build step: ES modules + import map, all libraries vendored under /lib.
+    This runs directly on GitHub Pages (and any static server).
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three/three.module.js",
+      "three/addons/": "./lib/three/addons/",
+      "@tweenjs/tween.js": "./lib/tween/tween.esm.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud" class="panel">
+    <h1>Astana Practical Exam — B category</h1>
+    <div class="row"><span>Speed</span><span><b id="hud-speed">0</b> km/h</span></div>
+    <div class="row"><span>Gear</span><b id="hud-gear">D</b></div>
+    <div class="row"><span>Camera</span><b id="hud-camera">chase</b></div>
+    <div class="row"><span>Headlights</span><b id="hud-lights">OFF</b></div>
+    <div class="row"><span>Cones hit</span><b id="hud-cones">0 / 0</b></div>
+  </div>
+
+  <div id="help" class="panel">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows drive ·
+    <kbd>C</kbd> camera · <kbd>L</kbd> lights · <kbd>O</kbd> doors · <kbd>R</kbd> reset
+  </div>
+
+  <div id="loading">Loading…</div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

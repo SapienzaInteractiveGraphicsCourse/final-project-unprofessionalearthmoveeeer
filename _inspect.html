@@ -1,0 +1,18 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#777}</style>
+<script type="importmap">{"imports":{"three":"./lib/three/three.module.js","three/addons/":"./lib/three/addons/","@tweenjs/tween.js":"./lib/tween/tween.esm.js"}}</script>
+</head><body><script type="module">
+import * as THREE from 'three';
+import * as TWEEN from '@tweenjs/tween.js';
+import { buildCar } from './src/world/car.js';
+const r=new THREE.WebGLRenderer({antialias:true});r.setSize(1000,700);r.shadowMap.enabled=true;document.body.appendChild(r.domElement);
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x8fb8db);
+sc.add(new THREE.HemisphereLight(0xbcd6ef,0x55503f,0.9));
+const d=new THREE.DirectionalLight(0xffffff,2.2);d.position.set(6,9,7);d.castShadow=true;sc.add(d);
+const g=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:0x55585e}));g.rotation.x=-Math.PI/2;g.receiveShadow=true;sc.add(g);
+const tweens=new TWEEN.Group();
+const car=buildCar({tweens});sc.add(car.group);
+car.toggleDoors(); // open both doors
+// View from the driver (+Z) side to see the door swing.
+const cam=new THREE.PerspectiveCamera(45,1000/700,0.1,100);cam.position.set(2,2.6,7);cam.lookAt(-0.2,0.9,0);
+let ms=0;function loop(){ms+=20;tweens.update(ms);car.update(0.02);r.render(sc,cam);requestAnimationFrame(loop);}loop();
+</script></body></html>

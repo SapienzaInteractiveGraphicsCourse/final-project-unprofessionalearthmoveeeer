@@ -1,0 +1,85 @@
+// Kinematic driving model (a "bicycle model") that turns keyboard input into
+// car motion. No physics engine — speed, heading and position are integrated
+// by hand, then pushed to the car's scene-graph node and wheels.
+
+import * as THREE from 'three';
+import { MAX_STEER } from './world/car.js';
+
+const WHEELBASE = 2.9;       // distance between axles (m)
+const MAX_FWD = 15;          // m/s  (~54 km/h)
+const MAX_REV = -5;          // m/s
+const ENGINE_ACCEL = 9;      // m/s²
+const BRAKE_DECEL = 20;      // m/s²
+const ROLL_FRICTION = 3.2;   // m/s² coasting deceleration
+const STEER_SPEED = 3.0;     // how fast the steering angle eases to target
+
+const START = { x: -15, z: 0, heading: 0 };
+
+export class Vehicle {
+  constructor(car) {
+    this.car = car;
+    this.x = START.x;
+    this.z = START.z;
+    this.heading = START.heading; // yaw, radians
+    this.speed = 0;               // signed m/s
+    this.steer = 0;               // current steering angle (radians)
+    this.braking = false;
+    this._dir = new THREE.Vector3();
+  }
+
+  reset() {
+    this.x = START.x; this.z = START.z; this.heading = START.heading;
+    this.speed = 0; this.steer = 0;
+    this.car.reset();
+  }
+
+  get speedKmh() { return Math.abs(this.speed) * 3.6; }
+  get gear() { return this.speed < -0.2 ? 'R' : 'D'; }
+
+  /**
+   * @param dt        seconds
+   * @param throttle  +1 forward, -1 brake/reverse, 0 coast
+   * @param steerIn   -1..+1 (left/right)
+   */
+  update(dt, throttle, steerIn) {
+    // --- Longitudinal ----------------------------------------------------
+    this.braking = false;
+    if (throttle > 0) {
+      this.speed += ENGINE_ACCEL * dt;
+    } else if (throttle < 0) {
+      if (this.speed > 0.1) {
+        this.speed -= BRAKE_DECEL * dt; // braking
+        this.braking = true;
+      } else {
+        this.speed -= ENGINE_ACCEL * 0.6 * dt; // reverse
+      }
+    } else {
+      // Coast: friction pulls speed toward zero.
+      const f = ROLL_FRICTION * dt;
+      this.speed += this.speed > 0 ? -Math.min(f, this.speed) : Math.min(f, -this.speed);
+    }
+    this.speed = THREE.MathUtils.clamp(this.speed, MAX_REV, MAX_FWD);
+
+    // --- Steering (eased; tighter lock at low speed) ---------------------
+    const speedFactor = 1 - 0.45 * Math.min(1, Math.abs(this.speed) / MAX_FWD);
+    const targetSteer = steerIn * MAX_STEER * speedFactor;
+    this.steer += (targetSteer - this.steer) * Math.min(1, STEER_SPEED * dt);
+
+    // --- Integrate pose (bicycle model) ----------------------------------
+    if (Math.abs(this.speed) > 1e-3) {
+      this.heading += (this.speed / WHEELBASE) * Math.tan(this.steer) * dt;
+    }
+    // Car-local forward +X under yaw → world (cos h, 0, -sin h).
+    this._dir.set(Math.cos(this.heading), 0, -Math.sin(this.heading));
+    const dist = this.speed * dt;
+    this.x += this._dir.x * dist;
+    this.z += this._dir.z * dist;
+
+    // --- Push to the car node + animated parts ---------------------------
+    this.car.group.position.set(this.x, 0, this.z);
+    this.car.group.rotation.y = this.heading;
+    this.car.setSteering(this.steer);
+    this.car.addRoll(dist);
+    this.car.setBrake(this.braking || this.speed < -0.15);
+  }
+}
