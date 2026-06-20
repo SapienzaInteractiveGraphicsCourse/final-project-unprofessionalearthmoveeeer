@@ -9,8 +9,12 @@
 
 import * as THREE from 'three';
 
-export const AUTO_W = 130; // metres along X
-export const AUTO_H = 90;  // metres along Z
+// The map image is 1237×848. The ground plane matches that aspect so image
+// pixel coordinates convert exactly to world coordinates (see mapCoords.js).
+export const IMG_W = 1237;
+export const IMG_H = 848;
+export const AUTO_W = 130;                     // metres along X
+export const AUTO_H = AUTO_W * IMG_H / IMG_W;  // metres along Z (≈ 89.1, matches image)
 
 // ---- Shared layout (read by the 3D props in examGround.js) ----------------
 function row(x0, x1, z, n) { const o = []; for (let i = 0; i < n; i++) o.push({ x: x0 + (x1 - x0) * (i / (n - 1)), z }); return o; }
@@ -28,8 +32,8 @@ export const LAYOUT = {
     { x: parkBays[1].cx, z: parkBays[1].cz, ry: 0, color: 0x2f6fb0 },
     { x: garageBays[2].cx, z: garageBays[2].cz, ry: Math.PI, color: 0x2c8a4a },
   ],
-  // START on the top straight, facing −X (parking zone to the right).
-  start: { x: 6, z: -33.5, heading: Math.PI },
+  // START from image pixel (850, 45), facing −X (west).
+  start: { x: (850 / IMG_W - 0.5) * AUTO_W, z: (45 / IMG_H - 0.5) * AUTO_H, heading: Math.PI },
 };
 
 // ---- Palette --------------------------------------------------------------

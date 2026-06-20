@@ -15,6 +15,7 @@ import { buildCar } from './world/car.js';
 import { Vehicle } from './vehicle.js';
 import { Keyboard } from './input.js';
 import { CameraManager } from './cameras.js';
+import { Exam } from './exam/exam.js';
 
 // --- Renderer -------------------------------------------------------------
 const container = document.getElementById('app');
@@ -46,6 +47,7 @@ scene.add(car.group);
 
 const vehicle = new Vehicle(car, examGround.start);
 const cameras = new CameraManager(camera, controls, car.group);
+const exam = new Exam(vehicle, car);
 
 // --- Input ----------------------------------------------------------------
 const keys = new Keyboard();
@@ -58,11 +60,12 @@ keys.tap('Space', () => { vehicle.handbrake = !vehicle.handbrake; });
 keys.tap('KeyQ', () => car.setIndicator(car.indicator === 'left' ? 'off' : 'left'));
 keys.tap('KeyE', () => car.setIndicator(car.indicator === 'right' ? 'off' : 'right'));
 keys.tap('KeyH', () => car.setIndicator(car.indicator === 'hazard' ? 'off' : 'hazard'));
-keys.tap('KeyR', () => { vehicle.reset(); car.setIndicator('off'); });
+keys.tap('KeyR', () => { vehicle.reset(); car.setIndicator('off'); exam.reset(); });
 
 // --- HUD ------------------------------------------------------------------
-// Hide the examiner panels for now (no scoring this build).
-for (const id of ['exam', 'prompt', 'result']) {
+// Hide the prompt/result overlays (no full exam flow yet); keep the panel for
+// the running penalty total.
+for (const id of ['prompt', 'result']) {
   const el = document.getElementById(id);
   if (el) el.style.display = 'none';
 }
@@ -73,8 +76,12 @@ const hud = {
   camera: document.getElementById('hud-camera'),
   lights: document.getElementById('hud-lights'),
   signal: document.getElementById('hud-signal'),
+  penalty: document.getElementById('hud-penalty'),
+  viol: document.getElementById('hud-viol'),
 };
 hud.camera.textContent = cameras.mode;
+document.getElementById('hud-time').textContent = '—';
+document.getElementById('hud-cones').textContent = '—';
 
 // --- Resize ---------------------------------------------------------------
 window.addEventListener('resize', () => {
