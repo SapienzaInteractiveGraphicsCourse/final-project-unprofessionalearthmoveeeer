@@ -1,15 +1,14 @@
 # Kazakhstan Driving Exam Simulator — B Category (Astana)
 
-Interactive Graphics course project (Sapienza University of Rome). An in-browser
+Interactive Graphics course project. An in-browser
 training site and simulation of the **practical driving test of Kazakhstan**,
 starting from a **category-B car** on the **Astana** exam ground.
 
-Built with **Three.js** and **tween.js**. No build step — it runs as a static
-site directly on GitHub Pages.
+Built with **Three.js** and **tween.js**. 
 
 ## Live demo
 
-> _GitHub Pages link goes here once Pages is enabled (see below)._
+> _GitHub Pages link._
 
 ## Run locally
 
@@ -17,51 +16,55 @@ The app uses ES modules, so it must be served over HTTP (not opened from
 `file://`). Any static server works. With Python:
 
 ```bash
-# from the repository root
 python -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Controls (skeleton): drag to orbit the camera, scroll to zoom.
+## Controls
+
+| Input | Action |
+| --- | --- |
+| **W / ↑** | Accelerate · **S / ↓** brake & reverse |
+| **A / ←** · **D / →** | Steer left / right |
+| **C** | Cycle camera (chase → cockpit → top-down → orbit) |
+| **L** | Headlights · **O** doors · **R** reset |
+| Mouse | Orbit / zoom (in orbit camera mode) |
+
+The HUD shows speed, gear, camera, headlights and the cone penalty count.
 
 ## Project structure
 
 ```
 index.html              # entry point + import map (no bundler)
 src/
-  main.js               # renderer, camera, controls, main loop
+  main.js               # renderer, scene, main loop; wires everything together
+  vehicle.js            # kinematic bicycle driving model
+  input.js              # keyboard state
+  cameras.js            # chase / cockpit / top-down / orbit camera manager
   world/
-    environment.js      # ground, lights, placeholder vehicle (grows into the Astana site)
+    car.js              # hierarchical car model + its animations
+    environment.js      # sky, lights, surrounding textured ground
+    examGround.js       # marked exam pad, curbs, slalom cones + scoring
+    textures.js         # procedural asphalt (color/normal/roughness) + markings
 lib/                    # vendored libraries (committed, per course rules)
   three/                #   Three.js r160 + addons (OrbitControls, GLTFLoader, ...)
   tween/                #   tween.js (smooth hand-written animations)
-assets/                 # textures + models (added per milestone)
-docs/                   # technical document / user manual
-slides/                 # course slides + project requirements (reference)
+assets/                 # reserved for optional future models/textures
+docs/                   # technical document / user manual (technical-report.md)
 ```
+
+Full write-up: [docs/technical-report.md](docs/technical-report.md).
 
 ## Requirements coverage (course rubric)
 
 | Requirement | Plan |
 | --- | --- |
-| Hierarchical model | Category-B car: body → wheels (steer + roll), steering wheel, doors, suspension |
+| Hierarchical model | Category-B car: body then wheels (steer + roll), steering wheel, doors, suspension |
 | Lights & textures | Sun + headlights; asphalt color/normal/roughness maps, road markings, signs |
 | User interaction | Drive (keyboard), switch cameras, toggle headlights, restart maneuver, difficulty |
-| Animations (hand-written) | All in JS via Three.js + tween.js — **no imported animations** |
+| Animations (hand-written) | All in JS via Three.js and tween.js — **no imported animations** |
 
-## Libraries used (not developed by the team)
+## Libraries used
 
 - [Three.js](https://threejs.org/) r160 — rendering, scene graph, loaders
 - [tween.js](https://github.com/tweenjs/tween.js/) — interpolation / easing for smooth animation
-
-## Enabling GitHub Pages
-
-1. Push to the GitHub Classroom repository.
-2. Settings → Pages → deploy from `main`, root (`/`).
-3. Paste the published URL into the "Live demo" section above.
-
-## Status
-
-Milestone 1 — project skeleton: running scene with lit/shadowed textured
-ground, orbit camera, and a tween-driven placeholder vehicle. The car hierarchy
-and Astana exam-ground layout come next.
