@@ -28,6 +28,7 @@ export class Vehicle {
     this.accel = 0;               // signed m/s² this frame (for abrupt-braking rule)
     this.justStalled = false;     // true for the single frame the engine stalls
     this.hasMoved = false;        // ever exceeded the move threshold
+    this.handbrake = false;       // full-stop hold (toggled with Space)
     this._stallLatch = false;
     this._dir = new THREE.Vector3();
   }
@@ -36,6 +37,7 @@ export class Vehicle {
     this.x = this.start.x; this.z = this.start.z; this.heading = this.start.heading;
     this.speed = 0; this.steer = 0; this.accel = 0;
     this.justStalled = false; this.hasMoved = false; this._stallLatch = false;
+    this.handbrake = false;
     this.car.reset();
   }
 
@@ -51,6 +53,13 @@ export class Vehicle {
   update(dt, throttle, steerIn, bothPedals = false) {
     const prevSpeed = this.speed;
     this.justStalled = false;
+
+    // --- Handbrake: full stop, held until released ------------------------
+    if (this.handbrake) {
+      this.speed = 0;
+      throttle = 0;
+      bothPedals = false;
+    }
 
     // --- Engine stall: throttle + brake together near standstill ----------
     if (bothPedals && Math.abs(this.speed) < 1.5) {
@@ -113,6 +122,6 @@ export class Vehicle {
     this.car.setPose(this.heading, pitch);
     this.car.setSteering(this.steer);
     this.car.addRoll(dist);
-    this.car.setBrake(this.braking || this.speed < -0.15);
+    this.car.setBrake(this.braking || this.handbrake || this.speed < -0.15);
   }
 }

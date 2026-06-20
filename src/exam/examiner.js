@@ -7,6 +7,7 @@
 // specified but out of this subset.
 
 import * as THREE from 'three';
+import { OVERPASS } from '../world/overpass.js';
 
 // Geometry constants — must match the autodrome layout (autodromeMap.js).
 const TOP_Z = -33.5;        // top-road centre line (the START straight)
@@ -60,6 +61,12 @@ export class Examiner {
     this.turnAccum = 0;
     this.prevHeading = null;
     this.turnPenTime = -10;
+
+    // hill start (overpass)
+    this.hillStopJudged = false;
+    this.hillRollbackPenalized = false;
+    this.hillMinFx = Infinity;
+    this.hillStopTimer = 0;
   }
 
   toggleSeatbelt() { this.seatbelt = !this.seatbelt; }
@@ -84,6 +91,10 @@ export class Examiner {
     this._front.set(1.45, 0, 0);
     this.car.group.localToWorld(this._front);
     const fx = this._front.x, fz = this._front.z;
+
+    // On the hill-start overpass? (front axle within the ramp footprint)
+    const onRamp = fx <= OVERPASS.xA && fx >= OVERPASS.xD &&
+                   fz >= OVERPASS.z0 && fz <= OVERPASS.z1;
 
     // --- Phase 1: start command + timers ---------------------------------
     if (!this.commandIssued && this.clock >= COMMAND_DELAY) {
@@ -114,9 +125,41 @@ export class Examiner {
       }
     }
 
-    // Engine stall (attributed to the current phase).
+    // Engine stall (attributed to the current phase / exercise).
     if (v.justStalled) {
-      sc.penalize(this.crossedStart ? 'Circuit' : 'Start', 'Engine stalled', 5, this.clock);
+      const where = onRamp ? 'Hill start' : this.crossedStart ? 'Circuit' : 'Start';
+      sc.penalize(where, 'Engine stalled', 5, this.clock);
+    }
+
+    // --- Exercise 1: hill start (overpass) -------------------------------
+    if (onRamp) {
+      this.hillMinFx = Math.min(this.hillMinFx, fx);
+      // Rolling back (east) more than 30 cm from the furthest-forward point.
+      if (!this.hillRollbackPenalized && fx - this.hillMinFx > 0.30) {
+        sc.penalize('Hill start', 'Rolled back > 30 cm', 25, this.clock);
+        this.hillRollbackPenalized = true;
+      }
+      // A sustained stop on the ramp: judge its position vs the STOP line.
+      if (!this.hillStopJudged) {
+        if (Math.abs(v.speed) < 0.25) {
+          this.hillStopTimer += dt;
+          if (this.hillStopTimer > 0.4) {
+            this.hillStopJudged = true;
+            const d = fx - OVERPASS.stopX; // >0 short of line, <0 past line
+            if (d > 0.5) sc.penalize('Hill start', 'Stopped > 0.5 m before the STOP line', 25, this.clock);
+            else if (d < -0.5) sc.penalize('Hill start', 'Stopped past the STOP line', 25, this.clock);
+          }
+        } else {
+          this.hillStopTimer = 0;
+        }
+      }
+    }
+    // Crossed the STOP line while still moving (i.e. never stopped for it).
+    if (!this.hillStopJudged && Math.abs(v.speed) > 0.4 && this.prevFront != null &&
+        this.prevFront > OVERPASS.stopX && fx <= OVERPASS.stopX &&
+        fz >= OVERPASS.z0 && fz <= OVERPASS.z1) {
+      this.hillStopJudged = true;
+      sc.penalize('Hill start', 'Did not stop at the STOP line', 25, this.clock);
     }
 
     // --- Exercise 5: slalom cone touches ---------------------------------

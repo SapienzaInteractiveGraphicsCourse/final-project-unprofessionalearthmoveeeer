@@ -69,6 +69,7 @@ keys.tap('KeyC', () => { hud.camera.textContent = cameras.next(); });
 keys.tap('KeyL', () => { headlightsOn = !headlightsOn; car.setHeadlights(headlightsOn); hud.lights.textContent = headlightsOn ? 'ON' : 'OFF'; });
 keys.tap('KeyO', () => car.toggleDoors());
 keys.tap('KeyB', () => examiner.toggleSeatbelt());
+keys.tap('Space', () => { vehicle.handbrake = !vehicle.handbrake; });
 keys.tap('KeyQ', () => car.setIndicator(car.indicator === 'left' ? 'off' : 'left'));
 keys.tap('KeyE', () => car.setIndicator(car.indicator === 'right' ? 'off' : 'right'));
 keys.tap('KeyH', () => car.setIndicator(car.indicator === 'hazard' ? 'off' : 'hazard'));
@@ -159,7 +160,7 @@ function animate() {
 
 function updateHud() {
   hud.speed.textContent = Math.round(vehicle.speedKmh);
-  hud.gear.textContent = vehicle.gear;
+  hud.gear.textContent = vehicle.handbrake ? 'P' : vehicle.gear;
   hud.lights.textContent = headlightsOn ? 'ON' : 'OFF';
   hud.belt.textContent = examiner.seatbelt ? 'ON' : 'OFF';
   hud.signal.textContent = ({ left: '◄ left', right: 'right ►', hazard: 'hazard', off: '—' })[car.indicator];

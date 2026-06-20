@@ -9,12 +9,14 @@
 
 import * as THREE from 'three';
 
-const MODES = ['chase', 'cockpit', 'top', 'orbit'];
+const MODES = ['fixed', 'cockpit', 'top', 'orbit'];
 
 // Local-space rig points per mode: where the camera sits and what it looks at.
+// `fixed` is rigidly bolted to the car (lerp 1 = no smoothing): it translates and
+// rotates exactly with the car rather than chasing it.
 const RIG = {
-  chase:   { pos: new THREE.Vector3(-7.5, 4.0, 0), look: new THREE.Vector3(4, 1.2, 0), lerp: 0.08 },
-  cockpit: { pos: new THREE.Vector3(0.2, 1.62, 0.38), look: new THREE.Vector3(8, 1.4, 0.38), lerp: 0.5 },
+  fixed:   { pos: new THREE.Vector3(-7.5, 3.6, 0), look: new THREE.Vector3(5, 1.2, 0), lerp: 1.0 },
+  cockpit: { pos: new THREE.Vector3(0.2, 1.62, 0.38), look: new THREE.Vector3(8, 1.4, 0.38), lerp: 1.0 },
   top:     { pos: new THREE.Vector3(0, 22, 0.001), look: new THREE.Vector3(0, 0, 0), lerp: 0.1 },
 };
 
@@ -23,7 +25,7 @@ export class CameraManager {
     this.camera = camera;
     this.controls = controls; // OrbitControls
     this.car = car;           // THREE.Object3D (root)
-    this.mode = 'chase';
+    this.mode = 'fixed';
 
     this._pos = new THREE.Vector3();
     this._look = new THREE.Vector3();
@@ -45,6 +47,8 @@ export class CameraManager {
   }
 
   update() {
+    this.car.updateMatrixWorld(); // use the car's current pose this frame
+
     if (this.mode === 'orbit') {
       // Keep the orbit pivot on the car so it stays framed while it drives.
       this.car.getWorldPosition(this._target);
