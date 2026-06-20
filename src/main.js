@@ -11,6 +11,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 
 import { buildEnvironment } from './world/environment.js';
 import { buildExamGround } from './world/examGround.js';
+import { buildOverpass } from './world/overpass.js';
 import { buildCar } from './world/car.js';
 import { Vehicle } from './vehicle.js';
 import { Keyboard } from './input.js';
@@ -42,10 +43,11 @@ const tweens = new TWEEN.Group();
 
 buildEnvironment(scene);
 const examGround = buildExamGround(scene);
+const overpass = buildOverpass(scene); // hill-start element (image x 550→210)
 const car = buildCar({ color: 0xc62828, tweens });
 scene.add(car.group);
 
-const vehicle = new Vehicle(car, examGround.start);
+const vehicle = new Vehicle(car, examGround.start, overpass);
 const cameras = new CameraManager(camera, controls, car.group);
 const exam = new Exam(vehicle, car);
 
@@ -104,6 +106,7 @@ function animate() {
 
   vehicle.update(dt, throttle, steerIn, up && dn);
   car.update(dt);
+  exam.update(dt);
   tweens.update(performance.now());
   cameras.update();
 
@@ -111,6 +114,11 @@ function animate() {
   hud.gear.textContent = vehicle.handbrake ? 'P' : vehicle.gear;
   hud.lights.textContent = headlightsOn ? 'ON' : 'OFF';
   hud.signal.textContent = ({ left: '◄ left', right: 'right ►', hazard: 'hazard', off: '—' })[car.indicator];
+
+  const sc = exam.scoring;
+  hud.penalty.textContent = sc.total;
+  hud.penalty.className = 'big pts' + (sc.total >= 100 ? ' bad' : sc.total >= 50 ? ' warn' : '');
+  hud.viol.textContent = sc.lastViolation ? `−${sc.lastViolation.points}  ${sc.lastViolation.rule}` : '';
 
   renderer.render(scene, camera);
 }
