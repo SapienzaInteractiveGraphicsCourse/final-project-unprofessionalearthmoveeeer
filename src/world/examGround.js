@@ -3,23 +3,40 @@
 // through, a perimeter curb, and a couple of static parked cars for context.
 
 import * as THREE from 'three';
-import { AUTO_W, AUTO_H, LAYOUT, makeAutodromeTexture } from './autodromeMap.js';
+import { AUTO_W, AUTO_H, LAYOUT } from './autodromeMap.js';
 
 export { AUTO_W, AUTO_H } from './autodromeMap.js';
+
+// Drop your autodrome image here (PNG or JPG). It is laid flat on the ground.
+const MAP_IMAGE = 'assets/textures/autodrome.png';
 
 export function buildExamGround(scene) {
   const group = new THREE.Group();
   scene.add(group);
 
-  // --- Painted map -------------------------------------------------------
-  const map = new THREE.Mesh(
-    new THREE.PlaneGeometry(AUTO_W, AUTO_H),
-    new THREE.MeshStandardMaterial({ map: makeAutodromeTexture(), roughness: 0.95, metalness: 0.0 })
-  );
+  // --- Ground map: the autodrome image laid flat -------------------------
+  // Starts as neutral grey, then swaps in the PNG once it loads. Image is
+  // oriented so its top = north (−Z) and right = east (+X) — i.e. START at the
+  // top, parking on the right, matching the reference photo.
+  const mapMat = new THREE.MeshStandardMaterial({ color: 0x70747a, roughness: 0.97, metalness: 0.0 });
+  const map = new THREE.Mesh(new THREE.PlaneGeometry(AUTO_W, AUTO_H), mapMat);
   map.rotation.x = -Math.PI / 2;
   map.position.y = 0.02;
   map.receiveShadow = true;
   group.add(map);
+
+  new THREE.TextureLoader().load(
+    MAP_IMAGE,
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 16;
+      mapMat.map = tex;
+      mapMat.color.set(0xffffff);
+      mapMat.needsUpdate = true;
+    },
+    undefined,
+    () => console.warn(`[examGround] map image not found at ${MAP_IMAGE} — using grey ground.`)
+  );
 
   // --- Perimeter curb ----------------------------------------------------
   const curbMat = new THREE.MeshStandardMaterial({ color: 0xe6e6e8, roughness: 0.8 });
