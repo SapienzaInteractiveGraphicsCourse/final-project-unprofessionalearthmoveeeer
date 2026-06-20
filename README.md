@@ -8,7 +8,7 @@ Built with **Three.js** and **tween.js**.
 
 ## Live demo
 
-> _GitHub Pages link._
+[> _GitHub Pages link._](https://sapienzainteractivegraphicscourse.github.io/final-project-unprofessionalearthmoveeeer/)
 
 ## Run locally
 
